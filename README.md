@@ -1,4 +1,13 @@
 # FreqDGT: Frequency-Adaptive Dynamic Graph Networks with Transformer for Cross-subject EEG Emotion Recognition
+<div style="display: flex; align-items: center; justify-content: center;">
+
+  <p align="center">
+    <a href="https://arxiv.org">
+      <img src="FreqDGT.png" alt="FreqDGT" style="max-width: 80%; height: auto;"/>
+    </a>
+  </p>
+
+</div>
 
 [![PyTorch](https://img.shields.io/badge/PyTorch-1.9+-red.svg)](https://pytorch.org/)
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org/)
