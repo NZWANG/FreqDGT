@@ -133,91 +133,91 @@ class FrequencyAdaptiveProcessing(nn.Module):
         output = alpha * output + (1 - alpha) * identity
         return output
 
-class AdaptiveDynamicGraphLearning(nn.Module):
-    def __init__(self, num_channels, hidden_dim, feature_dim, dropout=0.1):
-        super().__init__()
-        self.num_channels = num_channels
-        self.hidden_dim = hidden_dim
+# class AdaptiveDynamicGraphLearning(nn.Module):
+#     def __init__(self, num_channels, hidden_dim, feature_dim, dropout=0.1):
+#         super().__init__()
+#         self.num_channels = num_channels
+#         self.hidden_dim = hidden_dim
         
-        self.shallow_relation = nn.Sequential(
-            nn.Linear(feature_dim, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.GELU(),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.LayerNorm(hidden_dim // 2),
-            nn.GELU()
-        )
+#         self.shallow_relation = nn.Sequential(
+#             nn.Linear(feature_dim, hidden_dim),
+#             nn.LayerNorm(hidden_dim),
+#             nn.GELU(),
+#             nn.Linear(hidden_dim, hidden_dim // 2),
+#             nn.LayerNorm(hidden_dim // 2),
+#             nn.GELU()
+#         )
         
-        self.deep_relation = nn.Sequential(
-            nn.Linear(feature_dim, hidden_dim*2),
-            nn.LayerNorm(hidden_dim*2),
-            nn.GELU(),
-            nn.Dropout(dropout/2),
-            nn.Linear(hidden_dim*2, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.GELU(),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.LayerNorm(hidden_dim // 2),
-            nn.GELU()
-        )
+#         self.deep_relation = nn.Sequential(
+#             nn.Linear(feature_dim, hidden_dim*2),
+#             nn.LayerNorm(hidden_dim*2),
+#             nn.GELU(),
+#             nn.Dropout(dropout/2),
+#             nn.Linear(hidden_dim*2, hidden_dim),
+#             nn.LayerNorm(hidden_dim),
+#             nn.GELU(),
+#             nn.Linear(hidden_dim, hidden_dim // 2),
+#             nn.LayerNorm(hidden_dim // 2),
+#             nn.GELU()
+#         )
         
-        self.gc1_shallow = nn.Linear(feature_dim, hidden_dim)
-        self.gc2_shallow = nn.Linear(hidden_dim, hidden_dim)
-        self.gc1_deep = nn.Linear(feature_dim, hidden_dim)
-        self.gc2_deep = nn.Linear(hidden_dim, hidden_dim)
+#         self.gc1_shallow = nn.Linear(feature_dim, hidden_dim)
+#         self.gc2_shallow = nn.Linear(hidden_dim, hidden_dim)
+#         self.gc1_deep = nn.Linear(feature_dim, hidden_dim)
+#         self.gc2_deep = nn.Linear(hidden_dim, hidden_dim)
         
-        self.dropout = nn.Dropout(dropout)
-        self.layer_norm1 = nn.LayerNorm(hidden_dim)
-        self.layer_norm2 = nn.LayerNorm(hidden_dim)
+#         self.dropout = nn.Dropout(dropout)
+#         self.layer_norm1 = nn.LayerNorm(hidden_dim)
+#         self.layer_norm2 = nn.LayerNorm(hidden_dim)
         
-        self.graph_refine = nn.Sequential(
-            nn.Linear(hidden_dim // 2, hidden_dim // 4),
-            nn.GELU(),
-            nn.Linear(hidden_dim // 4, hidden_dim // 2)
-        )
+#         self.graph_refine = nn.Sequential(
+#             nn.Linear(hidden_dim // 2, hidden_dim // 4),
+#             nn.GELU(),
+#             nn.Linear(hidden_dim // 4, hidden_dim // 2)
+#         )
     
-    def build_dynamic_adjacency(self, x):
-        node_features_shallow = self.shallow_relation(x)
-        node_features_deep = self.deep_relation(x)
+#     def build_dynamic_adjacency(self, x):
+#         node_features_shallow = self.shallow_relation(x)
+#         node_features_deep = self.deep_relation(x)
         
-        similarity_shallow = torch.bmm(node_features_shallow, node_features_shallow.transpose(1, 2))
-        similarity_deep = torch.bmm(node_features_deep, node_features_deep.transpose(1, 2))
+#         similarity_shallow = torch.bmm(node_features_shallow, node_features_shallow.transpose(1, 2))
+#         similarity_deep = torch.bmm(node_features_deep, node_features_deep.transpose(1, 2))
         
-        enhanced_features = self.graph_refine(node_features_shallow)
-        enhanced_similarity = torch.bmm(enhanced_features, enhanced_features.transpose(1, 2))
+#         enhanced_features = self.graph_refine(node_features_shallow)
+#         enhanced_similarity = torch.bmm(enhanced_features, enhanced_features.transpose(1, 2))
         
-        adj_shallow = F.softmax(similarity_shallow + 0.1 * enhanced_similarity, dim=-1)
-        adj_deep = F.softmax(similarity_deep, dim=-1)
+#         adj_shallow = F.softmax(similarity_shallow + 0.1 * enhanced_similarity, dim=-1)
+#         adj_deep = F.softmax(similarity_deep, dim=-1)
         
-        return adj_shallow, adj_deep
+#         return adj_shallow, adj_deep
     
-    def graph_convolution(self, x, adj, gc1, gc2):
-        h = self.gc1_shallow(x) if gc1 == self.gc1_shallow else self.gc1_deep(x)
-        h = torch.bmm(adj, h)
-        h = F.gelu(h)
-        h = self.dropout(h)
-        h = self.layer_norm1(h)
+#     def graph_convolution(self, x, adj, gc1, gc2):
+#         h = self.gc1_shallow(x) if gc1 == self.gc1_shallow else self.gc1_deep(x)
+#         h = torch.bmm(adj, h)
+#         h = F.gelu(h)
+#         h = self.dropout(h)
+#         h = self.layer_norm1(h)
         
-        h = self.gc2_shallow(h) if gc2 == self.gc2_shallow else self.gc2_deep(h)
-        h = torch.bmm(adj, h)
-        h = F.gelu(h)
-        h = self.layer_norm2(h)
+#         h = self.gc2_shallow(h) if gc2 == self.gc2_shallow else self.gc2_deep(h)
+#         h = torch.bmm(adj, h)
+#         h = F.gelu(h)
+#         h = self.layer_norm2(h)
         
-        return h
+#         return h
     
-    def forward(self, x):
-        batch_size, seq_len, channels, features = x.shape
-        x_aggregated = torch.mean(x, dim=1)
+#     def forward(self, x):
+#         batch_size, seq_len, channels, features = x.shape
+#         x_aggregated = torch.mean(x, dim=1)
         
-        adj_shallow, adj_deep = self.build_dynamic_adjacency(x_aggregated)
+#         adj_shallow, adj_deep = self.build_dynamic_adjacency(x_aggregated)
         
-        h_shallow = self.graph_convolution(x_aggregated, adj_shallow, self.gc1_shallow, self.gc2_shallow)
-        h_deep = self.graph_convolution(x_aggregated, adj_deep, self.gc1_deep, self.gc2_deep)
+#         h_shallow = self.graph_convolution(x_aggregated, adj_shallow, self.gc1_shallow, self.gc2_shallow)
+#         h_deep = self.graph_convolution(x_aggregated, adj_deep, self.gc1_deep, self.gc2_deep)
         
-        h_combined = 0.5 * (h_shallow + h_deep)
-        h_output = h_combined.unsqueeze(1).expand(-1, seq_len, -1, -1)
+#         h_combined = 0.5 * (h_shallow + h_deep)
+#         h_output = h_combined.unsqueeze(1).expand(-1, seq_len, -1, -1)
         
-        return h_output
+#         return h_output
 
 class MultiScaleTemporalTransformer(nn.Module):
     def __init__(self, dim, heads=8, dim_head=64, dropout=0.1, scales=[1, 2, 4, 8]):
@@ -310,108 +310,108 @@ class MultiScaleTemporalTransformer(nn.Module):
         
         return combined_output + identity
 
-class AdversarialDisentanglement(nn.Module):
-    def __init__(self, feature_dim, subject_dim, emotion_dim, dropout=0.25):
-        super().__init__()
-        self.feature_dim = feature_dim
-        self.subject_dim = subject_dim
-        self.emotion_dim = emotion_dim
+# class AdversarialDisentanglement(nn.Module):
+#     def __init__(self, feature_dim, subject_dim, emotion_dim, dropout=0.25):
+#         super().__init__()
+#         self.feature_dim = feature_dim
+#         self.subject_dim = subject_dim
+#         self.emotion_dim = emotion_dim
         
-        self.subject_encoder = nn.Sequential(
-            nn.Linear(feature_dim, subject_dim * 4),
-            nn.LayerNorm(subject_dim * 4),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(subject_dim * 4, subject_dim * 2),
-            nn.LayerNorm(subject_dim * 2),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(subject_dim * 2, subject_dim),
-            nn.LayerNorm(subject_dim)
-        )
+#         self.subject_encoder = nn.Sequential(
+#             nn.Linear(feature_dim, subject_dim * 4),
+#             nn.LayerNorm(subject_dim * 4),
+#             nn.GELU(),
+#             nn.Dropout(dropout),
+#             nn.Linear(subject_dim * 4, subject_dim * 2),
+#             nn.LayerNorm(subject_dim * 2),
+#             nn.GELU(),
+#             nn.Dropout(dropout),
+#             nn.Linear(subject_dim * 2, subject_dim),
+#             nn.LayerNorm(subject_dim)
+#         )
         
-        self.emotion_encoder = nn.Sequential(
-            nn.Linear(feature_dim, emotion_dim * 4),
-            nn.LayerNorm(emotion_dim * 4),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(emotion_dim * 4, emotion_dim * 2),
-            nn.LayerNorm(emotion_dim * 2),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(emotion_dim * 2, emotion_dim),
-            nn.LayerNorm(emotion_dim)
-        )
+#         self.emotion_encoder = nn.Sequential(
+#             nn.Linear(feature_dim, emotion_dim * 4),
+#             nn.LayerNorm(emotion_dim * 4),
+#             nn.GELU(),
+#             nn.Dropout(dropout),
+#             nn.Linear(emotion_dim * 4, emotion_dim * 2),
+#             nn.LayerNorm(emotion_dim * 2),
+#             nn.GELU(),
+#             nn.Dropout(dropout),
+#             nn.Linear(emotion_dim * 2, emotion_dim),
+#             nn.LayerNorm(emotion_dim)
+#         )
         
-        self.subject_decoder = nn.Sequential(
-            nn.Linear(subject_dim, subject_dim * 2),
-            nn.LayerNorm(subject_dim * 2),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(subject_dim * 2, subject_dim * 4),
-            nn.LayerNorm(subject_dim * 4),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(subject_dim * 4, feature_dim),
-            nn.LayerNorm(feature_dim)
-        )
+#         self.subject_decoder = nn.Sequential(
+#             nn.Linear(subject_dim, subject_dim * 2),
+#             nn.LayerNorm(subject_dim * 2),
+#             nn.GELU(),
+#             nn.Dropout(dropout),
+#             nn.Linear(subject_dim * 2, subject_dim * 4),
+#             nn.LayerNorm(subject_dim * 4),
+#             nn.GELU(),
+#             nn.Dropout(dropout),
+#             nn.Linear(subject_dim * 4, feature_dim),
+#             nn.LayerNorm(feature_dim)
+#         )
         
-        self.emotion_decoder = nn.Sequential(
-            nn.Linear(emotion_dim, emotion_dim * 2),
-            nn.LayerNorm(emotion_dim * 2),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(emotion_dim * 2, emotion_dim * 4),
-            nn.LayerNorm(emotion_dim * 4),
-            nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(emotion_dim * 4, feature_dim),
-            nn.LayerNorm(feature_dim)
-        )
+#         self.emotion_decoder = nn.Sequential(
+#             nn.Linear(emotion_dim, emotion_dim * 2),
+#             nn.LayerNorm(emotion_dim * 2),
+#             nn.GELU(),
+#             nn.Dropout(dropout),
+#             nn.Linear(emotion_dim * 2, emotion_dim * 4),
+#             nn.LayerNorm(emotion_dim * 4),
+#             nn.GELU(),
+#             nn.Dropout(dropout),
+#             nn.Linear(emotion_dim * 4, feature_dim),
+#             nn.LayerNorm(feature_dim)
+#         )
         
-        self.discriminator = nn.Sequential(
-            nn.Linear(emotion_dim, emotion_dim // 2),
-            nn.ReLU(),
-            nn.Linear(emotion_dim // 2, 1),
-            nn.Sigmoid()
-        )
+#         self.discriminator = nn.Sequential(
+#             nn.Linear(emotion_dim, emotion_dim // 2),
+#             nn.ReLU(),
+#             nn.Linear(emotion_dim // 2, 1),
+#             nn.Sigmoid()
+#         )
     
-    def forward(self, x):
-        subject_features = self.subject_encoder(x)
-        emotion_features = self.emotion_encoder(x)
+#     def forward(self, x):
+#         subject_features = self.subject_encoder(x)
+#         emotion_features = self.emotion_encoder(x)
         
-        subject_reconstructed = self.subject_decoder(subject_features)
-        emotion_reconstructed = self.emotion_decoder(emotion_features)
+#         subject_reconstructed = self.subject_decoder(subject_features)
+#         emotion_reconstructed = self.emotion_decoder(emotion_features)
         
-        subject_recon_loss = F.mse_loss(subject_reconstructed, x)
-        emotion_recon_loss = F.mse_loss(emotion_reconstructed, x)
+#         subject_recon_loss = F.mse_loss(subject_reconstructed, x)
+#         emotion_recon_loss = F.mse_loss(emotion_reconstructed, x)
         
-        return {
-            'subject_features': subject_features,
-            'emotion_features': emotion_features,
-            'subject_reconstructed': subject_reconstructed,
-            'emotion_reconstructed': emotion_reconstructed,
-            'subject_recon_loss': subject_recon_loss,
-            'emotion_recon_loss': emotion_recon_loss
-        }
+#         return {
+#             'subject_features': subject_features,
+#             'emotion_features': emotion_features,
+#             'subject_reconstructed': subject_reconstructed,
+#             'emotion_reconstructed': emotion_reconstructed,
+#             'subject_recon_loss': subject_recon_loss,
+#             'emotion_recon_loss': emotion_recon_loss
+#         }
     
-    def contrastive_loss(self, subject_features, emotion_features, temperature=0.1):
-        device = subject_features.device
+#     def contrastive_loss(self, subject_features, emotion_features, temperature=0.1):
+#         device = subject_features.device
         
-        subject_features = F.normalize(subject_features, dim=1)
-        emotion_features = F.normalize(emotion_features, dim=1)
+#         subject_features = F.normalize(subject_features, dim=1)
+#         emotion_features = F.normalize(emotion_features, dim=1)
         
-        similarity = torch.matmul(subject_features, emotion_features.transpose(0, 1)) / temperature
-        contrastive_loss = torch.mean(torch.abs(similarity))
+#         similarity = torch.matmul(subject_features, emotion_features.transpose(0, 1)) / temperature
+#         contrastive_loss = torch.mean(torch.abs(similarity))
         
-        if subject_features.shape[0] > 1:
-            domain_preds = self.discriminator(emotion_features)
-            domain_targets = torch.zeros_like(domain_preds)
-            adversarial_loss = F.binary_cross_entropy(domain_preds, domain_targets)
-        else:
-            adversarial_loss = torch.tensor(0.0, device=device)
+#         if subject_features.shape[0] > 1:
+#             domain_preds = self.discriminator(emotion_features)
+#             domain_targets = torch.zeros_like(domain_preds)
+#             adversarial_loss = F.binary_cross_entropy(domain_preds, domain_targets)
+#         else:
+#             adversarial_loss = torch.tensor(0.0, device=device)
         
-        return contrastive_loss + adversarial_loss
+#         return contrastive_loss + adversarial_loss
 
 class MultiScaleTemporalDisentanglementNetwork(nn.Module):
     def __init__(self, dim, depth=2, heads=8, dim_head=64, dropout=0.1, 
