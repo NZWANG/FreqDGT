@@ -10,14 +10,11 @@ import glob
 from datetime import datetime
 import json
 from sklearn.metrics import classification_report
-
 from FreqDGT import FreqDGT
 from base.cross_validation import CrossValidation
 from base.utils import seed_all, ensure_path
 from datasets.SEED import SEED
-
 current_dir = os.getcwd()
-
 def check_processed_data(data_path, num_subjects):
     expected_files = [f'sub{i}.pkl' for i in range(num_subjects)]
     all_exist = True
@@ -88,13 +85,12 @@ def main():
     parser.add_argument('--dataset', type=str, default='SEED')
     parser.add_argument('--data-path', type=str, default=r"SEED/Preprocessed_EEG")
     parser.add_argument('--processed-data-path', type=str, 
-                       default='/root/autodl-tmp/EEG-Lipschitz/data_processed/data_rPSD_SEED_FreqDGT',
-                       help='Path to processed data')
+                       default='/data_rPSD_SEED_FreqDGT',)
     parser.add_argument('--subjects', type=int, default=15)
     parser.add_argument('--data-exist', action='store_true', help='Skip data preparation')
     parser.add_argument('--fold-to-run', type=int, default=7)
-    parser.add_argument('--num-class', type=int, default=3, choices=[2, 3, 4])
-    parser.add_argument('--label-type', type=str, default='NA', choices=['A', 'V', 'D', 'L', 'NA'])
+    parser.add_argument('--num-class', type=int, default=2)
+    parser.add_argument('--label-type', type=str, default='NA')
     parser.add_argument('--session-to-load', default=[1])
     parser.add_argument('--segment', type=int, default=20)
     parser.add_argument('--overlap', type=float, default=0.8)
@@ -105,12 +101,10 @@ def main():
     parser.add_argument('--num-time', type=int, default=8)
     parser.add_argument('--num-feature', type=int, default=7)
     parser.add_argument('--loading-key', type=str, default='eeg')
-    parser.add_argument('--data-format', type=str, default='rPSD', 
-                        choices=['DE', 'Hjorth', 'PSD', 'rPSD', 'sta', 'multi-view', 'raw'])
+    parser.add_argument('--data-format', type=str, default='rPSD')
     parser.add_argument('--split', type=int, default=1)
     parser.add_argument('--sub-split', type=int, default=1)
     parser.add_argument('--extract-feature', type=int, default=1)
-    
     parser.add_argument('--random-seed', type=int, default=1234)
     parser.add_argument('--max-epoch', type=int, default=20)
     parser.add_argument('--patient', type=int, default=5)
@@ -130,7 +124,6 @@ def main():
     parser.add_argument('--log-path', default='/root/autodl-tmp/EEG-Lipschitz/par')
     parser.add_argument('--results-path', default='/root/autodl-tmp/EEG-Lipschitz/par')
     parser.add_argument('--save-model', type=int, default=0)
-    
     parser.add_argument('--graph-type', type=str, default='BL')
     parser.add_argument('--model', type=str, default='FreqDGT')
     parser.add_argument('--layers-graph', type=list, default=[1, 2])
@@ -142,18 +135,13 @@ def main():
     parser.add_argument('--K', type=int, default=4)
     parser.add_argument('--graph2token', type=str, default='Linear', choices=['Linear', 'AvgPool', 'MaxPool', 'Flatten'])
     parser.add_argument('--encoder-type', type=str, default='Cheby', choices=['GCN', 'Cheby'])
-    
-    parser.add_argument('--feature-type', type=str, default='rPSD', choices=['rPSD', 'DE'])
+    parser.add_argument('--feature-type', type=str, default='rPSD', choices=['rPSD'])
     parser.add_argument('--enable-disentangle', action='store_true', default=True)
-    
     parser.add_argument('--run-twice', action='store_true', default=True)
     parser.add_argument('--second-seed', type=int, default=2345)
-    
     parser.add_argument('--reproduce', type=int, default=0)
     parser.add_argument('--force-process', action='store_true')
-    
     args = parser.parse_args()
-    
     if args.feature_type == 'DE':
         args.data_format = 'DE'
         args.processed_data_path = args.processed_data_path.replace('rPSD', 'DE')
